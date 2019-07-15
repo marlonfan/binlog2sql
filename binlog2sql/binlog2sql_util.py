@@ -265,3 +265,21 @@ def reversed_blocks(fin, block_size=4096):
         here -= delta
         fin.seek(here, os.SEEK_SET)
         yield fin.read(delta)
+
+def concat_sql_from_binlogevent(cursor, binlogevent, row=None, eStartPos=None, flashback=False, no_pk=False):
+    if flashback and no_pk:
+        raise ValueError('only one of flashback or nopk can be True')
+    if not (isinstance(binlogevent, WriteRowsEvent) or isinstance(binlogevent, UpdateRowsEvent) or isinstance(binlogevent, DeleteRowsEvent) or isinstance(binlogevent, QueryEvent)):
+        raise ValueError('binlogevent must be WriteRowsEvent, UpdateRowsEvent, DeleteRowsEvent or QueryEvent')
+
+    sql = ''
+    if isinstance(binlogevent, WriteRowsEvent) or isinstance(binlogevent, UpdateRowsEvent) or isinstance(binlogevent, DeleteRowsEvent):
+        pattern = generate_sql_pattern(binlogevent, row=row, flashback=flashback, no_pk=no_pk)
+        sql = cursor.mogrify(pattern['template'], pattern['values'])
+        sql += ' #start %s end %s time %s' % (eStartPos, binlogevent.packet.log_pos, datetime.datetime.fromtimestamp(binlogevent.timestamp))
+    elif flashback is False and isinstance(binlogevent, QueryEvent) and binlogevent.query != 'BEGIN' and binlogevent.query != 'COMMIT':
+        if binlogevent.schema:
+            sql = 'USE {0};\n'.format(binlogevent.schema)
+        sql += '{0};'.format(fix_object(binlogevent.query))
+
+    return sql
