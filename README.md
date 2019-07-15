@@ -1,3 +1,13 @@
+# PS: fork版本,支持加载本地 binlog 文件
+
+```shell
+# 回闪sql
+python bin2sql.py --flashback -h127.0.0.1 -P3306 -p'BvhpikKeihLbJjc4yimk6EgA' -ddemo_database -tdemo_table -f 本地文件路径
+
+# 输出sql
+python bin2sql.py -h127.0.0.1 -P3306 -p'BvhpikKeihLbJjc4yimk6EgA' -ddemo_database -tdemo_table -f 本地文件路径
+```
+
 binlog2sql
 ========================
 
